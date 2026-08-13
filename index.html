@@ -142,24 +142,20 @@
     const resultOverlay = document.getElementById('result-overlay');
     const qrData = document.getElementById('qr-data');
     
+    // Royalty-free children cheering audio sample
+    const cheerAudio = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
+    cheerAudio.preload = 'auto';
+
     let mediaStream = null;
     let animFrameId = null;
 
-    function playBeep() {
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.15);
+    function playCheer() {
+      cheerAudio.currentTime = 0;
+      cheerAudio.play().catch(err => console.error('Audio playback blocked:', err));
     }
 
     function handleSuccess(data) {
-      playBeep();
+      playCheer();
       
       confetti({
         particleCount: 120,
@@ -210,6 +206,12 @@
     }
 
     async function startScanner() {
+      // Unlock audio context on mobile user gesture
+      cheerAudio.play().then(() => {
+        cheerAudio.pause();
+        cheerAudio.currentTime = 0;
+      }).catch(() => {});
+
       scannerModal.style.display = 'block';
 
       try {
