@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Padfest 2026 - QR Scanner</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <style>
     * {
@@ -58,24 +58,13 @@
       z-index: 10;
       overflow: hidden;
     }
-    #qr-reader {
-      width: 100vw !important;
-      height: 100vh !important;
-      border: none !important;
-      position: absolute !important;
-      top: 0 !important;
-      left: 0 !important;
-    }
-    #qr-reader video {
-      width: 100vw !important;
-      height: 100vh !important;
-      object-fit: cover !important;
-    }
-    #qr-reader__dashboard,
-    #qr-reader__header_message,
-    #qr-reader__status_span,
-    #qr-reader img {
-      display: none !important;
+    #webcam {
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      position: absolute;
+      top: 0;
+      left: 0;
     }
     #viewfinder-overlay {
       position: absolute;
@@ -131,11 +120,13 @@
   <button id="scan-btn">Scan QR code</button>
 
   <div id="scanner-modal">
-    <div id="qr-reader"></div>
+    <video id="webcam" playsinline></video>
     <div id="viewfinder-overlay">
       <div class="viewfinder-square"></div>
     </div>
   </div>
+
+  <canvas id="qr-canvas" style="display:none;"></canvas>
 
   <div id="result-overlay">
     <div id="qr-data"></div>
@@ -145,11 +136,14 @@
   <script>
     const scanBtn = document.getElementById('scan-btn');
     const scannerModal = document.getElementById('scanner-modal');
+    const webcam = document.getElementById('webcam');
+    const canvas = document.getElementById('qr-canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     const resultOverlay = document.getElementById('result-overlay');
     const qrData = document.getElementById('qr-data');
     
-    let html5QrCode = null;
-    let isProcessing = false;
+    let mediaStream = null;
+    let animFrameId = null;
 
     function playBeep() {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -183,38 +177,51 @@
       }, 3500);
     }
 
+    function stopScanner() {
+      if (animFrameId) {
+        cancelAnimationFrame(animFrameId);
+        animFrameId = null;
+      }
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+      }
+      scannerModal.style.display = 'none';
+    }
+
+    function scanFrame() {
+      if (webcam.readyState === webcam.HAVE_ENOUGH_DATA) {
+        canvas.width = webcam.videoWidth;
+        canvas.height = webcam.videoHeight;
+        ctx.drawImage(webcam, 0, 0, canvas.width, canvas.height);
+        
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: "dontInvert"
+        });
+
+        if (code && code.data) {
+          stopScanner();
+          handleSuccess(code.data);
+          return;
+        }
+      }
+      animFrameId = requestAnimationFrame(scanFrame);
+    }
+
     async function startScanner() {
-      if (isProcessing) return;
-      
       scannerModal.style.display = 'block';
 
-      if (!html5QrCode) {
-        html5QrCode = new Html5Qrcode("qr-reader");
-      }
-
       try {
-        await html5QrCode.start(
-          { facingMode: "environment" },
-          { fps: 15 },
-          async (decodedText) => {
-            if (isProcessing) return;
-            isProcessing = true;
-
-            try {
-              await html5QrCode.stop();
-            } catch (e) {
-              console.error(e);
-            }
-
-            scannerModal.style.display = 'none';
-            handleSuccess(decodedText);
-            isProcessing = false;
-          }
-        );
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } }
+        });
+        webcam.srcObject = mediaStream;
+        await webcam.play();
+        animFrameId = requestAnimationFrame(scanFrame);
       } catch (err) {
         alert('Unable to access camera: ' + err);
         scannerModal.style.display = 'none';
-        isProcessing = false;
       }
     }
 
