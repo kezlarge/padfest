@@ -77,6 +77,26 @@
     #qr-reader img {
       display: none !important;
     }
+    #viewfinder-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 15;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .viewfinder-square {
+      width: min(65vw, 65vh);
+      height: min(65vw, 65vh);
+      max-width: 280px;
+      max-height: 280px;
+      border: 3px solid rgba(255, 255, 255, 0.85);
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+    }
     #result-overlay {
       display: none;
       position: fixed;
@@ -112,6 +132,9 @@
 
   <div id="scanner-modal">
     <div id="qr-reader"></div>
+    <div id="viewfinder-overlay">
+      <div class="viewfinder-square"></div>
+    </div>
   </div>
 
   <div id="result-overlay">
@@ -169,12 +192,10 @@
         html5QrCode = new Html5Qrcode("qr-reader");
       }
 
-      const boxSize = Math.floor(Math.min(window.innerWidth, window.innerHeight) * 0.65);
-
       try {
         await html5QrCode.start(
           { facingMode: "environment" },
-          { fps: 15, qrbox: { width: boxSize, height: boxSize } },
+          { fps: 15 },
           async (decodedText) => {
             if (isProcessing) return;
             isProcessing = true;
