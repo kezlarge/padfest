@@ -35,16 +35,17 @@
       padding: 18px 36px;
       font-size: 18px;
       font-weight: 600;
-      color: #ffffff;
-      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #0f172a;
+      background-color: #e2e8f0;
       border: none;
-      border-radius: 12px;
+      border-radius: 0;
       cursor: pointer;
-      box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.4);
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      transition: transform 0.15s ease, background-color 0.15s ease;
     }
     #scan-btn:active {
       transform: scale(0.96);
+      background-color: #cbd5e1;
     }
     #scanner-modal {
       display: none;
@@ -60,11 +61,6 @@
       width: 100vw !important;
       height: 100vh !important;
       border: none !important;
-    }
-    #qr-reader video {
-      width: 100% !important;
-      height: 100% !important;
-      object-fit: cover !important;
     }
     #qr-reader__dashboard,
     #qr-reader__header_message,
@@ -118,7 +114,9 @@
     const scannerModal = document.getElementById('scanner-modal');
     const resultOverlay = document.getElementById('result-overlay');
     const qrData = document.getElementById('qr-data');
-    let html5QrCode;
+    
+    let html5QrCode = null;
+    let isProcessing = false;
 
     function playBeep() {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -153,8 +151,13 @@
     }
 
     async function startScanner() {
+      if (isProcessing) return;
+      
       scannerModal.style.display = 'block';
-      html5QrCode = new Html5Qrcode("qr-reader");
+
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("qr-reader");
+      }
 
       const calculateSquareBox = (viewfinderWidth, viewfinderHeight) => {
         const edge = Math.min(viewfinderWidth, viewfinderHeight);
@@ -165,17 +168,26 @@
       try {
         await html5QrCode.start(
           { facingMode: "environment" },
-          { fps: 10, qrbox: calculateSquareBox },
-          (decodedText) => {
-            html5QrCode.stop().then(() => {
-              scannerModal.style.display = 'none';
-              handleSuccess(decodedText);
-            });
+          { fps: 15, qrbox: calculateSquareBox },
+          async (decodedText) => {
+            if (isProcessing) return;
+            isProcessing = true;
+
+            try {
+              await html5QrCode.stop();
+            } catch (e) {
+              console.error(e);
+            }
+
+            scannerModal.style.display = 'none';
+            handleSuccess(decodedText);
+            isProcessing = false;
           }
         );
       } catch (err) {
         alert('Unable to access camera: ' + err);
         scannerModal.style.display = 'none';
+        isProcessing = false;
       }
     }
 
