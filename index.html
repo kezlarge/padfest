@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QR Scanner</title>
+  <title>Padfest 2026 - QR Scanner</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <style>
@@ -14,6 +14,7 @@
     }
     body {
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
       height: 100vh;
@@ -21,6 +22,14 @@
       background-color: #0f172a;
       color: #f8fafc;
       overflow: hidden;
+      gap: 28px;
+    }
+    .title {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: #f8fafc;
+      text-transform: uppercase;
     }
     #scan-btn {
       padding: 18px 36px;
@@ -62,35 +71,53 @@
     #qr-reader__status_span {
       display: none !important;
     }
-    #accepted-text {
+    #result-overlay {
       display: none;
       position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
+      text-align: center;
+      z-index: 20;
+      width: 85%;
+      max-width: 400px;
+    }
+    #qr-data {
+      font-size: 20px;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin-bottom: 12px;
+      word-break: break-all;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+    }
+    #accepted-text {
       font-size: 42px;
       font-weight: 900;
       color: #22c55e;
       letter-spacing: 3px;
-      z-index: 20;
       text-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
     }
   </style>
 </head>
 <body>
 
+  <h1 class="title">Padfest 2026</h1>
   <button id="scan-btn">Scan QR code</button>
 
   <div id="scanner-modal">
     <div id="qr-reader"></div>
   </div>
 
-  <div id="accepted-text">ACCEPTED</div>
+  <div id="result-overlay">
+    <div id="qr-data"></div>
+    <div id="accepted-text">ACCEPTED</div>
+  </div>
 
   <script>
     const scanBtn = document.getElementById('scan-btn');
     const scannerModal = document.getElementById('scanner-modal');
-    const acceptedText = document.getElementById('accepted-text');
+    const resultOverlay = document.getElementById('result-overlay');
+    const qrData = document.getElementById('qr-data');
     let html5QrCode;
 
     function playBeep() {
@@ -106,7 +133,7 @@
       osc.stop(audioCtx.currentTime + 0.15);
     }
 
-    function handleSuccess() {
+    function handleSuccess(data) {
       playBeep();
       
       confetti({
@@ -116,10 +143,12 @@
         zIndex: 30
       });
 
-      acceptedText.style.display = 'block';
+      qrData.textContent = data;
+      resultOverlay.style.display = 'block';
 
       setTimeout(() => {
-        acceptedText.style.display = 'none';
+        resultOverlay.style.display = 'none';
+        qrData.textContent = '';
       }, 2000);
     }
 
@@ -137,10 +166,10 @@
         await html5QrCode.start(
           { facingMode: "environment" },
           { fps: 10, qrbox: calculateSquareBox },
-          () => {
+          (decodedText) => {
             html5QrCode.stop().then(() => {
               scannerModal.style.display = 'none';
-              handleSuccess();
+              handleSuccess(decodedText);
             });
           }
         );
