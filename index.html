@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QR Scanner</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -16,20 +17,25 @@
       justify-content: center;
       align-items: center;
       height: 100vh;
-      font-family: system-ui, -apple-system, sans-serif;
-      background-color: #f8f9fa;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #0f172a;
+      color: #f8fafc;
       overflow: hidden;
     }
     #scan-btn {
-      padding: 16px 32px;
+      padding: 18px 36px;
       font-size: 18px;
       font-weight: 600;
       color: #ffffff;
-      background-color: #007bff;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
       border: none;
-      border-radius: 8px;
+      border-radius: 12px;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.4);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    #scan-btn:active {
+      transform: scale(0.96);
     }
     #scanner-modal {
       display: none;
@@ -42,8 +48,19 @@
       z-index: 10;
     }
     #qr-reader {
-      width: 100%;
-      height: 100%;
+      width: 100vw !important;
+      height: 100vh !important;
+      border: none !important;
+    }
+    #qr-reader video {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+    }
+    #qr-reader__dashboard,
+    #qr-reader__header_message,
+    #qr-reader__status_span {
+      display: none !important;
     }
     #accepted-text {
       display: none;
@@ -51,18 +68,12 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      font-size: 40px;
+      font-size: 42px;
       font-weight: 900;
-      color: #28a745;
-      letter-spacing: 2px;
+      color: #22c55e;
+      letter-spacing: 3px;
       z-index: 20;
-    }
-    .flash-border {
-      animation: greenFlash 0.6s ease-in-out 3;
-    }
-    @keyframes greenFlash {
-      0%, 100% { outline: none; }
-      50% { outline: 16px solid #28a745; outline-offset: -16px; }
+      text-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
     }
   </style>
 </head>
@@ -97,11 +108,17 @@
 
     function handleSuccess() {
       playBeep();
-      document.body.classList.add('flash-border');
+      
+      confetti({
+        particleCount: 120,
+        spread: 80,
+        origin: { y: 0.6 },
+        zIndex: 30
+      });
+
       acceptedText.style.display = 'block';
 
       setTimeout(() => {
-        document.body.classList.remove('flash-border');
         acceptedText.style.display = 'none';
       }, 2000);
     }
@@ -110,10 +127,16 @@
       scannerModal.style.display = 'block';
       html5QrCode = new Html5Qrcode("qr-reader");
 
+      const calculateSquareBox = (viewfinderWidth, viewfinderHeight) => {
+        const edge = Math.min(viewfinderWidth, viewfinderHeight);
+        const size = Math.floor(edge * 0.65);
+        return { width: size, height: size };
+      };
+
       try {
         await html5QrCode.start(
           { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 250, height: 250 } },
+          { fps: 10, qrbox: calculateSquareBox },
           () => {
             html5QrCode.stop().then(() => {
               scannerModal.style.display = 'none';
