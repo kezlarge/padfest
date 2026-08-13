@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Scanner</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: #f8f9fa;
+      overflow: hidden;
+    }
+    #scan-btn {
+      padding: 16px 32px;
+      font-size: 18px;
+      font-weight: 600;
+      color: #ffffff;
+      background-color: #007bff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    #scanner-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #000000;
+      z-index: 10;
+    }
+    #qr-reader {
+      width: 100%;
+      height: 100%;
+    }
+    #accepted-text {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 40px;
+      font-weight: 900;
+      color: #28a745;
+      letter-spacing: 2px;
+      z-index: 20;
+    }
+    .flash-border {
+      animation: greenFlash 0.6s ease-in-out 3;
+    }
+    @keyframes greenFlash {
+      0%, 100% { outline: none; }
+      50% { outline: 16px solid #28a745; outline-offset: -16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <button id="scan-btn">Scan QR code</button>
+
+  <div id="scanner-modal">
+    <div id="qr-reader"></div>
+  </div>
+
+  <div id="accepted-text">ACCEPTED</div>
+
+  <script>
+    const scanBtn = document.getElementById('scan-btn');
+    const scannerModal = document.getElementById('scanner-modal');
+    const acceptedText = document.getElementById('accepted-text');
+    let html5QrCode;
+
+    function playBeep() {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.15);
+    }
+
+    function handleSuccess() {
+      playBeep();
+      document.body.classList.add('flash-border');
+      acceptedText.style.display = 'block';
+
+      setTimeout(() => {
+        document.body.classList.remove('flash-border');
+        acceptedText.style.display = 'none';
+      }, 2000);
+    }
+
+    async function startScanner() {
+      scannerModal.style.display = 'block';
+      html5QrCode = new Html5Qrcode("qr-reader");
+
+      try {
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          () => {
+            html5QrCode.stop().then(() => {
+              scannerModal.style.display = 'none';
+              handleSuccess();
+            });
+          }
+        );
+      } catch (err) {
+        alert('Unable to access camera: ' + err);
+        scannerModal.style.display = 'none';
+      }
+    }
+
+    scanBtn.addEventListener('click', startScanner);
+  </script>
+</body>
+</html>
