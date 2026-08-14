@@ -22,7 +22,7 @@
       background-color: #0f172a;
       color: #f8fafc;
       overflow: hidden;
-      gap: 28px;
+      gap: 24px;
     }
     .title {
       font-size: 32px;
@@ -30,6 +30,25 @@
       letter-spacing: 2px;
       color: #f8fafc;
       text-transform: uppercase;
+    }
+    #deny-toggle-btn {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background-color: #334155;
+      border: 3px solid #94a3b8;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+      outline: none;
+      transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    #deny-toggle-btn:active {
+      transform: scale(0.92);
+    }
+    #deny-toggle-btn.active {
+      border-color: #ef4444;
+      background-color: #991b1b;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
     }
     #scan-btn {
       padding: 18px 36px;
@@ -86,31 +105,6 @@
       border: 3px solid rgba(255, 255, 255, 0.85);
       box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
     }
-    #deny-toggle-btn {
-      position: fixed;
-      bottom: calc(50px + env(safe-area-inset-bottom, 0px));
-      left: 50%;
-      transform: translateX(-50%);
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      background-color: #334155;
-      border: 3px solid #94a3b8;
-      cursor: pointer;
-      z-index: 100;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
-      outline: none;
-      transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
-      display: block;
-    }
-    #deny-toggle-btn:active {
-      transform: translateX(-50%) scale(0.92);
-    }
-    #deny-toggle-btn.active {
-      border-color: #ef4444;
-      background-color: #991b1b;
-      box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
-    }
     #result-overlay {
       display: none;
       position: fixed;
@@ -158,6 +152,7 @@
 <body>
 
   <h1 class="title">Padfest 2026</h1>
+  <button id="deny-toggle-btn" aria-label="Toggle Denied Mode"></button>
   <button id="scan-btn">Scan QR code</button>
 
   <div id="scanner-modal">
@@ -165,7 +160,6 @@
     <div id="viewfinder-overlay">
       <div class="viewfinder-square"></div>
     </div>
-    <button id="deny-toggle-btn" aria-label="Toggle Denied Mode"></button>
   </div>
 
   <canvas id="qr-canvas" style="display:none;"></canvas>
@@ -177,6 +171,7 @@
 
   <script>
     const scanBtn = document.getElementById('scan-btn');
+    const denyToggleBtn = document.getElementById('deny-toggle-btn');
     const scannerModal = document.getElementById('scanner-modal');
     const webcam = document.getElementById('webcam');
     const canvas = document.getElementById('qr-canvas');
@@ -184,7 +179,6 @@
     const resultOverlay = document.getElementById('result-overlay');
     const qrData = document.getElementById('qr-data');
     const statusText = document.getElementById('status-text');
-    const denyToggleBtn = document.getElementById('deny-toggle-btn');
     
     const cheerAudio = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
     const denyAudio = new Audio('https://assets.mixkit.co/active_storage/sfx/2257/2257-preview.mp3');
@@ -195,14 +189,28 @@
     let animFrameId = null;
     let isDeniedMode = false;
 
-    denyToggleBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      e.preventDefault();
+    // Silent pre-unlock to satisfy smartphone audio policies without playing sound early
+    function silentPreUnlockAudio() {
+      [cheerAudio, denyAudio].forEach(audio => {
+        audio.muted = true;
+        audio.play().then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.muted = false;
+        }).catch(() => {
+          audio.muted = false;
+        });
+      });
+    }
+
+    denyToggleBtn.addEventListener('click', () => {
       isDeniedMode = !isDeniedMode;
       denyToggleBtn.classList.toggle('active', isDeniedMode);
+      silentPreUnlockAudio();
     });
 
     function playAudio(audioObj) {
+      audioObj.muted = false;
       audioObj.currentTime = 0;
       audioObj.play().catch(err => console.error('Audio blocked:', err));
     }
@@ -260,6 +268,10 @@
         resultOverlay.style.display = 'none';
         qrData.textContent = '';
         statusText.textContent = '';
+        
+        // Reset toggle button state after scan completes
+        isDeniedMode = false;
+        denyToggleBtn.classList.remove('active');
       }, 3500);
     }
 
@@ -296,17 +308,7 @@
     }
 
     async function startScanner() {
-      isDeniedMode = false;
-      denyToggleBtn.classList.remove('active');
-
-      // Pre-unlock audio contexts for mobile
-      [cheerAudio, denyAudio].forEach(audio => {
-        audio.play().then(() => {
-          audio.pause();
-          audio.currentTime = 0;
-        }).catch(() => {});
-      });
-
+      silentPreUnlockAudio();
       scannerModal.style.display = 'block';
 
       try {
