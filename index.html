@@ -31,6 +31,22 @@
       color: #f8fafc;
       text-transform: uppercase;
     }
+    #scan-btn {
+      padding: 18px 36px;
+      font-size: 18px;
+      font-weight: 600;
+      color: #0f172a;
+      background-color: #e2e8f0;
+      border: none;
+      border-radius: 0;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      transition: transform 0.15s ease, background-color 0.15s ease;
+    }
+    #scan-btn:active {
+      transform: scale(0.96);
+      background-color: #cbd5e1;
+    }
     #deny-toggle-btn {
       width: 64px;
       height: 64px;
@@ -49,22 +65,6 @@
       border-color: #ef4444;
       background-color: #991b1b;
       box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
-    }
-    #scan-btn {
-      padding: 18px 36px;
-      font-size: 18px;
-      font-weight: 600;
-      color: #0f172a;
-      background-color: #e2e8f0;
-      border: none;
-      border-radius: 0;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      transition: transform 0.15s ease, background-color 0.15s ease;
-    }
-    #scan-btn:active {
-      transform: scale(0.96);
-      background-color: #cbd5e1;
     }
     #scanner-modal {
       display: none;
@@ -152,8 +152,8 @@
 <body>
 
   <h1 class="title">Padfest 2026</h1>
-  <button id="deny-toggle-btn" aria-label="Toggle Denied Mode"></button>
   <button id="scan-btn">Scan QR code</button>
+  <button id="deny-toggle-btn" aria-label="Toggle Denied Mode"></button>
 
   <div id="scanner-modal">
     <video id="webcam" playsinline></video>
@@ -189,7 +189,6 @@
     let animFrameId = null;
     let isDeniedMode = false;
 
-    // Silent pre-unlock to satisfy smartphone audio policies without playing sound early
     function silentPreUnlockAudio() {
       [cheerAudio, denyAudio].forEach(audio => {
         audio.muted = true;
@@ -269,7 +268,6 @@
         qrData.textContent = '';
         statusText.textContent = '';
         
-        // Reset toggle button state after scan completes
         isDeniedMode = false;
         denyToggleBtn.classList.remove('active');
       }, 3500);
