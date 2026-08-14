@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Padfest 2026 - QR Scanner</title>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
@@ -87,27 +87,29 @@
       box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
     }
     #deny-toggle-btn {
-      position: absolute;
-      bottom: 40px;
+      position: fixed;
+      bottom: calc(50px + env(safe-area-inset-bottom, 0px));
       left: 50%;
       transform: translateX(-50%);
-      width: 60px;
-      height: 60px;
+      width: 64px;
+      height: 64px;
       border-radius: 50%;
       background-color: #334155;
-      border: 3px solid #64748b;
+      border: 3px solid #94a3b8;
       cursor: pointer;
-      z-index: 16;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      z-index: 100;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
       outline: none;
-      transition: transform 0.15s ease, border-color 0.15s ease;
+      transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+      display: block;
     }
     #deny-toggle-btn:active {
       transform: translateX(-50%) scale(0.92);
     }
     #deny-toggle-btn.active {
       border-color: #ef4444;
-      background-color: #1e293b;
+      background-color: #991b1b;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
     }
     #result-overlay {
       display: none;
@@ -195,6 +197,7 @@
 
     denyToggleBtn.addEventListener('click', (e) => {
       e.stopPropagation();
+      e.preventDefault();
       isDeniedMode = !isDeniedMode;
       denyToggleBtn.classList.toggle('active', isDeniedMode);
     });
