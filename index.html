@@ -11,6 +11,10 @@
       font-family: 'BannerFont';
       src: url('banner.otf') format('opentype');
     }
+    @font-face {
+      font-family: 'PlainGermanica';
+      src: url('Plain Germanica.ttf') format('truetype');
+    }
 
     * {
       box-sizing: border-box;
@@ -34,7 +38,7 @@
       margin-bottom: 20px;
     }
     .title {
-      font-family: 'BannerFont', sans-serif;
+      font-family: 'PlainGermanica', sans-serif;
       font-size: 80px;
       line-height: 0.9;
       color: #f3ead9;
@@ -74,7 +78,7 @@
       cursor: pointer;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
       outline: none;
-      transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+      transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
     }
     #deny-toggle-btn:active {
       transform: scale(0.92);
@@ -104,7 +108,7 @@
       left: 0;
     }
     #viewfinder-overlay {
-      position: absolute;
+      position: fixed;
       top: 0;
       left: 0;
       width: 100vw;
@@ -211,6 +215,15 @@
     let animFrameId = null;
     let isDeniedMode = false;
 
+    function setHomepageButtonsDisabled(disabled) {
+      scanBtn.disabled = disabled;
+      denyToggleBtn.disabled = disabled;
+      scanBtn.style.pointerEvents = disabled ? 'none' : 'auto';
+      denyToggleBtn.style.pointerEvents = disabled ? 'none' : 'auto';
+      scanBtn.style.opacity = disabled ? '0.5' : '1';
+      denyToggleBtn.style.opacity = disabled ? '0.5' : '1';
+    }
+
     function silentPreUnlockAudio() {
       [cheerAudio, denyAudio].forEach(audio => {
         audio.muted = true;
@@ -264,6 +277,7 @@
     }
 
     function handleSuccess(data) {
+      setHomepageButtonsDisabled(true);
       qrData.textContent = data;
 
       if (isDeniedMode) {
@@ -292,6 +306,7 @@
         
         isDeniedMode = false;
         denyToggleBtn.classList.remove('active');
+        setHomepageButtonsDisabled(false);
       }, 3500);
     }
 
