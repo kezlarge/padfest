@@ -86,6 +86,29 @@
       border: 3px solid rgba(255, 255, 255, 0.85);
       box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
     }
+    #deny-toggle-btn {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background-color: #334155;
+      border: 3px solid #64748b;
+      cursor: pointer;
+      z-index: 16;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      outline: none;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    #deny-toggle-btn:active {
+      transform: translateX(-50%) scale(0.92);
+    }
+    #deny-toggle-btn.active {
+      border-color: #ef4444;
+      background-color: #1e293b;
+    }
     #result-overlay {
       display: none;
       position: fixed;
@@ -105,12 +128,28 @@
       word-break: break-all;
       text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
     }
-    #accepted-text {
+    #status-text {
       font-size: 42px;
       font-weight: 900;
-      color: #22c55e;
       letter-spacing: 3px;
+    }
+    #status-text.accepted {
+      color: #22c55e;
       text-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+    }
+    #status-text.denied {
+      color: #ef4444;
+      text-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+    }
+    @keyframes fall {
+      0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(105vh) rotate(360deg);
+        opacity: 0.8;
+      }
     }
   </style>
 </head>
@@ -124,13 +163,14 @@
     <div id="viewfinder-overlay">
       <div class="viewfinder-square"></div>
     </div>
+    <button id="deny-toggle-btn" aria-label="Toggle Denied Mode"></button>
   </div>
 
   <canvas id="qr-canvas" style="display:none;"></canvas>
 
   <div id="result-overlay">
     <div id="qr-data"></div>
-    <div id="accepted-text">ACCEPTED</div>
+    <div id="status-text"></div>
   </div>
 
   <script>
@@ -141,35 +181,82 @@
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     const resultOverlay = document.getElementById('result-overlay');
     const qrData = document.getElementById('qr-data');
+    const statusText = document.getElementById('status-text');
+    const denyToggleBtn = document.getElementById('deny-toggle-btn');
     
-    // Royalty-free children cheering audio sample
     const cheerAudio = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
+    const denyAudio = new Audio('https://assets.mixkit.co/active_storage/sfx/2257/2257-preview.mp3');
     cheerAudio.preload = 'auto';
+    denyAudio.preload = 'auto';
 
     let mediaStream = null;
     let animFrameId = null;
+    let isDeniedMode = false;
 
-    function playCheer() {
-      cheerAudio.currentTime = 0;
-      cheerAudio.play().catch(err => console.error('Audio playback blocked:', err));
+    denyToggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      isDeniedMode = !isDeniedMode;
+      denyToggleBtn.classList.toggle('active', isDeniedMode);
+    });
+
+    function playAudio(audioObj) {
+      audioObj.currentTime = 0;
+      audioObj.play().catch(err => console.error('Audio blocked:', err));
+    }
+
+    function triggerDeniedEmojis() {
+      const container = document.createElement('div');
+      container.style.position = 'fixed';
+      container.style.top = '0';
+      container.style.left = '0';
+      container.style.width = '100vw';
+      container.style.height = '100vh';
+      container.style.pointerEvents = 'none';
+      container.style.zIndex = '30';
+      container.style.overflow = 'hidden';
+      document.body.appendChild(container);
+
+      const emojis = ['❌', '⛔', '🚫'];
+      for (let i = 0; i < 35; i++) {
+        const el = document.createElement('div');
+        el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        el.style.position = 'absolute';
+        el.style.left = Math.random() * 100 + 'vw';
+        el.style.top = '-50px';
+        el.style.fontSize = (Math.random() * 20 + 24) + 'px';
+        el.style.animation = `fall ${Math.random() * 1.5 + 1.5}s linear forwards`;
+        container.appendChild(el);
+      }
+
+      setTimeout(() => container.remove(), 3000);
     }
 
     function handleSuccess(data) {
-      playCheer();
-      
-      confetti({
-        particleCount: 120,
-        spread: 80,
-        origin: { y: 0.6 },
-        zIndex: 30
-      });
-
       qrData.textContent = data;
+
+      if (isDeniedMode) {
+        playAudio(denyAudio);
+        statusText.textContent = 'DENIED';
+        statusText.className = 'denied';
+        triggerDeniedEmojis();
+      } else {
+        playAudio(cheerAudio);
+        statusText.textContent = 'ACCEPTED';
+        statusText.className = 'accepted';
+        confetti({
+          particleCount: 120,
+          spread: 80,
+          origin: { y: 0.6 },
+          zIndex: 30
+        });
+      }
+
       resultOverlay.style.display = 'block';
 
       setTimeout(() => {
         resultOverlay.style.display = 'none';
         qrData.textContent = '';
+        statusText.textContent = '';
       }, 3500);
     }
 
@@ -206,11 +293,16 @@
     }
 
     async function startScanner() {
-      // Unlock audio context on mobile user gesture
-      cheerAudio.play().then(() => {
-        cheerAudio.pause();
-        cheerAudio.currentTime = 0;
-      }).catch(() => {});
+      isDeniedMode = false;
+      denyToggleBtn.classList.remove('active');
+
+      // Pre-unlock audio contexts for mobile
+      [cheerAudio, denyAudio].forEach(audio => {
+        audio.play().then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+        }).catch(() => {});
+      });
 
       scannerModal.style.display = 'block';
 
